@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+  
+  <head>
+    <title>
+      Modbus Control
+    </title>
+    <link rel="stylesheet" href="index.css">
+  </head>
+  
+  <body>
+    <h1>
+      Control RK6006
+    </h1>
+    <table style="height: 313px; width: 1910px;">
+      <tbody>
+        <tr>
+          <td style="width: 644.484px;">
+            <div class="checkbox-wrapper-35">
+              <input value="private" onchange="toggleCheckboxConnect(this)" name="switch"
+              id="connect_rk" type="checkbox" class="switch">
+              <label for="connect_rk">
+                <span class="switch-x-text">
+                  Status:
+                </span>
+                <span class="switch-x-toggletext">
+                  <span class="switch-x-unchecked">
+                    <span class="switch-x-hiddenlabel">
+                      Unchecked:
+                    </span>
+                    Disconnected
+                  </span>
+                  <span class="switch-x-checked">
+                    <span class="switch-x-hiddenlabel">
+                      Checked:
+                    </span>
+                    Connected
+                  </span>
+                </span>
+              </label>
+            </div>
+          </td>
+          <td style="width: 753.516px;">
+            <p>
+              <div>
+                Voltage input:
+                <span id='value_v_input'>
+                  0
+                </span>
+                V
+              </div>
+            </p>
+            <p>
+              <div>
+                Ampere per hour:
+                <span id='value_amp_hour'>
+                  0
+                </span>
+                Ah
+              </div>
+            </p>
+            <p>
+              <div>
+                Watt per hour:
+                <span id='value_watt_hour'>
+                  0
+                </span>
+                Wh
+              </div>
+            </p>
+          </td>
+          <td style="width: 226px;">
+            <p>
+              <div>
+                Temperature system:
+                <span id='value_temp_sys'>
+                  0
+                </span>
+                C
+              </div>
+            </p>
+            <p>
+              <div>
+                Temperature probe:
+                <span id='value_temp_probe'>
+                  0
+                </span>
+                C
+              </div>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="width: 644.484px;">
+            Voltage set:
+            <input type="number" value='0' step='0.5' min='0' max='60' id='value_v_set'
+            />
+            <input type="button" id='voltage_button' onclick='sendValue(this)' value="Set voltage">
+          </td>
+          <td style="width: 753.516px;">
+            Current set:
+            <input type="number" value='0' step='0.1' min='0' max='6' id='value_i_set'
+            />
+            <input type="button" id='current_button' onclick='sendValue(this)' value="Set current">
+          </td>
+          <td style="width: 226px;">
+            &nbsp;
+          </td>
+        </tr>
+        <tr>
+          <td style="width: 644.484px;">
+            <p>
+              <div>
+                Output voltage:
+                <span id='value_v_out'>
+                  0
+                </span>
+                V
+              </div>
+            </p>
+            <p>
+              <div class="checkbox-wrapper-35">
+                <input value="private" onchange="toggleCheckboxConnect(this)" name="switch"
+                id='output_status_chk' type="checkbox" class="switch">
+                <label for="output_status_chk">
+                  <span class="switch-x-text">
+                    Output status:
+                  </span>
+                  <span class="switch-x-toggletext">
+                    <span class="switch-x-unchecked">
+                      <span class="switch-x-hiddenlabel">
+                        Unchecked:
+                      </span>
+                      Off
+                    </span>
+                    <span class="switch-x-checked">
+                      <span class="switch-x-hiddenlabel">
+                        Checked:
+                      </span>
+                      On
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </p>
+          </td>
+          <td style="width: 753.516px;">
+            <p>
+              <div>
+                Output current:
+                <span id='value_i_out'>
+                  0
+                </span>
+                A
+              </div>
+            </p>
+            <p>
+              <div>
+                Output power:
+                <span id='value_watt'>
+                  0
+                </span>
+                W
+              </div>
+            </p>
+          </td>
+          <td style="width: 226px;">
+            &nbsp;
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <script type="text/javascript">
+      InitWebSocket()
+	  const v_input = document.getElementById('value_v_input');
+      const amp_hour = document.getElementById('value_amp_hour');
+      const watt_hour = document.getElementById('value_watt_hour');
+      const v_out = document.getElementById('value_v_out');
+      const i_out = document.getElementById('value_i_out');
+      const watt = document.getElementById('value_watt');
+      const temp_sys = document.getElementById('value_temp_sys');
+      const temp_probe = document.getElementById('value_temp_probe');
+      const output_status = document.getElementById('value_output_status');
+
+      function InitWebSocket() {
+        socket = new WebSocket('ws://' + window.location.hostname + ':81/');
+        socket.onmessage = onMessage;
+      }
+
+      function updateVI(v, i, o) {
+        if (document.getElementById("value_v_set").value == 0) {
+          document.getElementById("value_v_set").value = v / 100;
+          document.getElementById("value_i_set").value = i / 1000;
+        }
+        if ((o > 0) || (document.getElementById("value_v_set").value != 0)) {
+          document.getElementById('output_status_chk').checked = true;
+        }
+
+        if (document.getElementById("value_v_set").value != 0) {
+          document.getElementById('connect_rk').checked = true;
+        }
+      }
+
+      function sendValue(element) {
+        if (element.id == 'voltage_button') {
+          socket.send(JSON.stringify({
+            type: 'voltage',
+            value: document.getElementById('value_v_set').value * 100
+          }));
+        }
+        if (element.id == 'current_button') {
+          socket.send(JSON.stringify({
+            type: 'current',
+            value: document.getElementById('value_i_set').value * 1000
+          }));
+        }
+      }
+
+      function toggleCheckboxConnect(element) { // был нажат какой-то из переключателей
+        if (element.id == 'connect_rk') {
+          if (document.getElementById('connect_rk').checked) {
+            socket.send(JSON.stringify({
+              type: 'connect_rk',
+              value: '1'
+            }));
+          } else {
+            socket.send(JSON.stringify({
+              type: 'connect_rk',
+              value: '0'
+            }));
+          }
+        }
+        if ((element.id == 'output_status_chk') && (document.getElementById('connect_rk').checked)) {
+          if (document.getElementById('output_status_chk').checked) {
+            socket.send(JSON.stringify({
+              type: 'output',
+              value: '1'
+            }));
+          } else {
+            socket.send(JSON.stringify({
+              type: 'output',
+              value: '0'
+            }));;
+          }
+        }
+      }
+
+      function onMessage(event) { // Что-то пришло с сервера
+        var res = JSON.parse(event.data);
+        v_input.innerHTML = res.v_input / 100;
+        temp_sys.innerHTML = res.temp_sys;
+        temp_probe.innerHTML = res.temp_probe;
+        amp_hour.innerHTML = res.amp_hour / 1000;
+        watt_hour.innerHTML = res.watt_hour / 1000;
+        v_out.innerHTML = res.v_out / 100;
+        i_out.innerHTML = res.i_out / 1000;
+        watt.innerHTML = res.watt / 100;
+        updateVI(res.v_set, res.i_set, res.output_status);
+      }
+    </script>
+  </body>
+
+</html>

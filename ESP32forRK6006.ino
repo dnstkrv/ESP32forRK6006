@@ -1,7 +1,7 @@
 #include <ArduinoJson.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include <HardwareSerial.h>
+//#include <HardwareSerial.h>
 #include <LittleFS.h>
 #include <ModbusMaster.h>
 #include <WebSocketsServer.h>
@@ -14,10 +14,12 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 AsyncWebServer server(80);
 
 byte buf[] = {0x71, 0x75, 0x65, 0x72, 0x79, 0x64, 0x0d, 0x0a};
-bool swState_connect_rk = 0;
+bool swState_connect_rk, swState_batteryRecovery = 0;
 int v_out = 0;
 int8_t connectionNumber = 0;
 unsigned long messageInterval = 500;
+unsigned long lastUpdate = millis() + messageInterval;
+  
 ModbusMaster node;
 
 typedef struct ModbusRegister {
@@ -60,34 +62,15 @@ void setup() {
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
 }
+
 unsigned long lastUpdate = millis() + messageInterval;
+  
 void loop() {
   webSocket.loop();
-  uint8_t result;
-  result = 0;
-  if (swState_connect_rk && connectionNumber > 0 &&
-      lastUpdate + messageInterval < millis()) {
-    const size_t capacity = 1024;
-    DynamicJsonDocument doc(capacity);
-    result = node.readHoldingRegisters(0, 72);
-    doc["temp_sys"] = node.getResponseBuffer(5);
-    doc["v_out"] = node.getResponseBuffer(10);
-    doc["i_out"] = node.getResponseBuffer(11);
-    doc["watt"] = node.getResponseBuffer(13);
-    doc["v_input"] = node.getResponseBuffer(14);
-    doc["lock"] = node.getResponseBuffer(15);
-    doc["output_status"] = node.getResponseBuffer(18);
-    doc["backlight"] = node.getResponseBuffer(72);
-    doc["temp_probe"] = node.getResponseBuffer(35);
-    doc["amp_hour"] = node.getResponseBuffer(39);
-    doc["watt_hour"] = node.getResponseBuffer(41);
-    doc["v_set"] = node.getResponseBuffer(8);
-    doc["i_set"] = node.getResponseBuffer(9);
-    String buf;
-    serializeJson(doc, buf);
-    webSocket.broadcastTXT(buf);
-    lastUpdate = millis();
+  if (swState_batteryRecovery) {
+	  batteryRecovery();
   }
+  
 }
 
 void webSocketEvent(uint8_t client_num, WStype_t type, uint8_t* payload,
@@ -152,8 +135,43 @@ void connectRK6006() {
   Serial.write(buf, sizeof(buf));
 }
 
+void readRegisters() {
+  uint8_t result;
+  result = 0;
+
+  if (swState_connect_rk && connectionNumber > 0 &&
+      lastUpdate + messageInterval < millis()) {
+    const size_t capacity = 1024;
+    DynamicJsonDocument doc(capacity);
+    result = node.readHoldingRegisters(0, 72);
+    doc["temp_sys"] = node.getResponseBuffer(5);
+    doc["v_out"] = node.getResponseBuffer(10);
+    doc["i_out"] = node.getResponseBuffer(11);
+    doc["watt"] = node.getResponseBuffer(13);
+    doc["v_input"] = node.getResponseBuffer(14);
+    doc["lock"] = node.getResponseBuffer(15);
+    doc["output_status"] = node.getResponseBuffer(18);
+    doc["backlight"] = node.getResponseBuffer(72);
+    doc["temp_probe"] = node.getResponseBuffer(35);
+    doc["amp_hour"] = node.getResponseBuffer(39);
+    doc["watt_hour"] = node.getResponseBuffer(41);
+    doc["v_set"] = node.getResponseBuffer(8);
+    doc["i_set"] = node.getResponseBuffer(9);
+    String buf;
+    serializeJson(doc, buf);
+    webSocket.broadcastTXT(buf);
+    lastUpdate = millis();
+  }
+	
+}
+
 void disconnectRF6006() {
   // Serial.println("Disconnect from RK6006");
   node.writeSingleRegister(0x0012, 0);
   node.writeSingleRegister(0x000F, 0);
+}
+
+void batteryRecovery() {
+	
+	
 }

@@ -20,7 +20,6 @@ int8_t connectionNumber = 0;
 unsigned long messageInterval = 500;
 ModbusMaster node;
 
-// Заголовок: Адрес регистра, Название, Описание
 typedef struct ModbusRegister {
   uint16_t address;
   const char* description;
@@ -50,8 +49,6 @@ void setup() {
   connectToWiFi();
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
-    String vSetInitialValue = "0";  // Пример начального значения для V-SET
-    String iSetInitialValue = "0";  // Пример начального значения для I-SET
     request->send(LittleFS, "/index.html", "text/html");
   });
 

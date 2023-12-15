@@ -3,8 +3,9 @@
   
   <head>
     <title>
-      Modbus Control
+      Control RK6006
     </title>
+	<link rel="icon" href="favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="index.css">
   </head>
   
@@ -120,7 +121,7 @@
             </p>
             <p>
               <div class="checkbox-wrapper-35">
-                <input value="private" onchange="toggleCheckboxConnect(this)" name="switch"
+                <input value="private" disabled="true" onchange="toggleCheckboxConnect(this)" name="switch"
                 id='output_status_chk' type="checkbox" class="switch">
                 <label for="output_status_chk">
                   <span class="switch-x-text">
@@ -192,14 +193,13 @@
           document.getElementById("value_v_set").value = v / 100;
           document.getElementById("value_i_set").value = i / 1000;
         }
-        if ((o > 0) || (document.getElementById("value_v_set").value != 0)) {
+        if (o > 0) {
           document.getElementById('output_status_chk').checked = true;
-        }
-
-        if (document.getElementById("value_v_set").value != 0) {
-          document.getElementById('connect_rk').checked = true;
+            if (document.getElementById("value_v_set").value != 0) {
+              document.getElementById('connect_rk').checked = true;
         }
       }
+	  }
 
       function sendValue(element) {
         if (element.id == 'voltage_button') {
@@ -219,11 +219,13 @@
       function toggleCheckboxConnect(element) {
         if (element.id == 'connect_rk') {
           if (document.getElementById('connect_rk').checked) {
+		    document.getElementById('output_status_chk').disabled = false;
             socket.send(JSON.stringify({
               type: 'connect_rk',
               value: '1'
             }));
           } else {
+		    document.getElementById('output_status_chk').disabled = true;
             socket.send(JSON.stringify({
               type: 'connect_rk',
               value: '0'

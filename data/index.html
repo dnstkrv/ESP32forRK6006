@@ -172,7 +172,7 @@
     </table>
     <script type="text/javascript">
       InitWebSocket()
-	  const v_input = document.getElementById('value_v_input');
+      const v_input = document.getElementById('value_v_input');
       const amp_hour = document.getElementById('value_amp_hour');
       const watt_hour = document.getElementById('value_watt_hour');
       const v_out = document.getElementById('value_v_out');
@@ -216,7 +216,7 @@
         }
       }
 
-      function toggleCheckboxConnect(element) { // был нажат какой-то из переключателей
+      function toggleCheckboxConnect(element) {
         if (element.id == 'connect_rk') {
           if (document.getElementById('connect_rk').checked) {
             socket.send(JSON.stringify({
@@ -245,7 +245,7 @@
         }
       }
 
-      function onMessage(event) { // Что-то пришло с сервера
+      function onMessage(event) {
         var res = JSON.parse(event.data);
         v_input.innerHTML = res.v_input / 100;
         temp_sys.innerHTML = res.temp_sys;

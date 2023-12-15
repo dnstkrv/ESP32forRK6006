@@ -18,7 +18,6 @@ bool swState_connect_rk, swState_batteryRecovery = 0;
 int v_out = 0;
 int8_t connectionNumber = 0;
 unsigned long messageInterval = 500;
-unsigned long lastUpdate = millis() + messageInterval;
   
 ModbusMaster node;
 

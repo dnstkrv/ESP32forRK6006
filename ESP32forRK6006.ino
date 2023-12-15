@@ -7,8 +7,8 @@
 #include <WebSocketsServer.h>
 #include <WiFi.h>
 
-const char* ssid = "admin";
-const char* password = "00000000";
+const char* ssid = "";
+const char* password = "";
 
 WebSocketsServer webSocket = WebSocketsServer(81);
 AsyncWebServer server(80);

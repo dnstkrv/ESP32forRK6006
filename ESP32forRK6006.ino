@@ -1,7 +1,7 @@
 #include <ArduinoJson.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-//#include <HardwareSerial.h>
+#include <AsyncElegantOTA.h>
 #include <LittleFS.h>
 #include <ModbusMaster.h>
 #include <WebSocketsServer.h>
@@ -14,8 +14,10 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 AsyncWebServer server(80);
 
 byte buf[] = {0x71, 0x75, 0x65, 0x72, 0x79, 0x64, 0x0d, 0x0a};
-bool swState_connect_rk, swState_batteryRecovery, flagToMillis = 0;
-int v_out = 0;
+bool swState_connect_rk = 0;
+bool swState_batteryRecovery = 0;
+bool flagToMillis = 0;
+int v_out, i_out, batteryVoltageSet, batteryCapacity = 0;
 int8_t connectionNumber = 0;
 unsigned long messageInterval = 500;
 uint32_t recoveryStartTime, recoveryRunningTime, recoveryStep1Time, recoveryStep2Time = 0;
@@ -57,7 +59,9 @@ void setup() {
   server.on("/index.css", HTTP_GET, [](AsyncWebServerRequest* request) {
     request->send(LittleFS, "/index.css", "text/css");
   });
+  
 
+  AsyncElegantOTA.begin(&server);
   server.begin();
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
@@ -70,6 +74,7 @@ void loop() {
   if (swState_batteryRecovery) {
 	  batteryRecovery();
   }
+  readRegisters();
   
 }
 
@@ -134,7 +139,7 @@ void connectToWiFi() {
   //while (WiFi.status() != WL_CONNECTED) {
     //delay(1000);
     // Serial.println("Connecting to WiFi...");
-  }
+  //}
   // Serial.println("Connected to WiFi");
   // Serial.print("IP Address: ");
   // Serial.println(WiFi.localIP());
@@ -167,7 +172,9 @@ void readRegisters() {
     doc["watt_hour"] = node.getResponseBuffer(41);
     doc["v_set"] = node.getResponseBuffer(8);
     doc["i_set"] = node.getResponseBuffer(9);
-	doc["charge_time"] = recoveryRunningTime;
+	  doc["charge_time"] = recoveryRunningTime;
+    v_out = node.getResponseBuffer(10);
+    i_out = node.getResponseBuffer(11);
     String buf;
     serializeJson(doc, buf);
     webSocket.broadcastTXT(buf);
@@ -185,23 +192,23 @@ void disconnectRF6006() {
 
 
 void batteryRecovery() {
-	int batteryVoltageSetStep2 = 1 620; // 16.2V
-    bool step1;	
+	int batteryVoltageSetStep2 = 1620; 
+  bool step1;	
 	if (!flagToMillis) {
 		flagToMillis = !flagToMillis;
 		recoveryStartTime = millis();
 		node.writeSingleRegister(v_set_reg.address, batteryVoltageSet);
-		node.writeSingleRegister(i_set_reg.address, (batteryCapacity * 0.01);
+		node.writeSingleRegister(i_set_reg.address, (batteryCapacity * 0.01 * 1000));
 		delay(100);
 		node.writeSingleRegister(output_status_reg.address, 1);
-	}
+	  }
 	recoveryRunningTime = millis() - recoveryStartTime;
 	
-	if ((batteryVoltageSet > (v_out-0.02)) && (i_out < (batteryCapacyty * 0.001)) && (step1) {
+	if ((batteryVoltageSet > (v_out-0.02)) && (i_out < (batteryCapacity * 0.001)) && (step1)) {
 		step1 = !step1;
-		node.writeSingleRegister(v_set_reg.address, batteryVoltageSetStep2);
-		node.writeSingleRegister(i_set_reg.address, (batteryCapacity * 0.02);
-		recoveryStep1Time = recoveryStartTime - recoveryRunningTime
+		node.writeSingleRegister(v_set_reg.address, batteryVoltageSetStep2 * 100);
+		node.writeSingleRegister(i_set_reg.address, (batteryCapacity * 0.02 * 1000));
+		recoveryStep1Time = recoveryStartTime - recoveryRunningTime;
 		recoveryStep2Time = recoveryRunningTime;
 	}
 	if ((recoveryRunningTime - recoveryStep2Time) > 28800000) {

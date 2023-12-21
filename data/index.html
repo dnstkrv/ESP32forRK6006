@@ -178,7 +178,7 @@
                 <td>Battery capacity, Ah: <input type="number" value='75' step='1' min='10' max='150' id='batteryCapacity' /></td>
                 <td></td>
                 <td></td>
-            </tr>	
+            </tr> 
             <tr>
                 <td><input type="button" id='battery_recovery_button' onclick='sendValue(this)' value="Set voltage"></td>
                 <td>Charge time: <span id='charge_time'>0</span>min.</div></td>
@@ -234,22 +234,22 @@
                     value: document.getElementById('value_i_set').value * 1000
                 }));
             }
-			if (element.id == 'battery_recovery_button') {
+      if (element.id == 'battery_recovery_button') {
                 socket.send(JSON.stringify({
                     type: 'batteryVoltageSet',
-                    value: document.getElementById('batteryVoltageSet').value * 1000
+                    value: document.getElementById('batteryVoltageSet').value * 100
                 }
-				));
-				socket.send(JSON.stringify({
+        ));
+        socket.send(JSON.stringify({
                     type: 'batteryCapacity',
-                    value: document.getElementById('value_i_set').value
+                    value: document.getElementById('batteryCapacity').value
                 }
-				));
-				socket.send(JSON.stringify({
+        ));
+        socket.send(JSON.stringify({
                     type: 'swState_batteryRecovery',
                     value: '1'
                 }
-				));
+        ));
             }
         }
 
@@ -294,7 +294,7 @@
             v_out.innerHTML = res.v_out / 100;
             i_out.innerHTML = res.i_out / 1000;
             watt.innerHTML = res.watt / 100;
-			charge_time.innerHTML = res.charge_time / 60000;
+            charge_time.innerHTML = res.charge_time / 60000;
             updateVI(res.v_set, res.i_set, res.output_status);
         }
     </script>

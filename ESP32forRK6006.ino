@@ -18,7 +18,7 @@ bool swState_connect_rk, swState_batteryRecovery, flagToMillis = 0;
 int v_out = 0;
 int8_t connectionNumber = 0;
 unsigned long messageInterval = 500;
-uint32_t recoveryStartTime, recoveryRunningTime, recoveryStep2Time = 0;
+uint32_t recoveryStartTime, recoveryRunningTime, recoveryStep1Time, recoveryStep2Time = 0;
 
 ModbusMaster node;
 
@@ -107,6 +107,16 @@ void webSocketEvent(uint8_t client_num, WStype_t type, uint8_t* payload,
           node.writeSingleRegister(output_status_reg.address, 0);
         }
       }
+	  
+	  if (strcmp(type, "batteryVoltageSet") == 0) {
+        batteryVoltageSet = value;
+      }
+	  if (strcmp(type, "batteryCapacity") == 0) {
+        batteryCapacity = value;
+      }
+	  if (strcmp(type, "swState_batteryRecovery") == 0) {
+        swState_batteryRecovery = value;
+      }
 
       break;
     }
@@ -157,6 +167,7 @@ void readRegisters() {
     doc["watt_hour"] = node.getResponseBuffer(41);
     doc["v_set"] = node.getResponseBuffer(8);
     doc["i_set"] = node.getResponseBuffer(9);
+	doc["charge_time"] = recoveryRunningTime;
     String buf;
     serializeJson(doc, buf);
     webSocket.broadcastTXT(buf);
@@ -190,9 +201,10 @@ void batteryRecovery() {
 		step1 = !step1;
 		node.writeSingleRegister(v_set_reg.address, batteryVoltageSetStep2);
 		node.writeSingleRegister(i_set_reg.address, (batteryCapacity * 0.02);
+		recoveryStep1Time = recoveryStartTime - recoveryRunningTime
 		recoveryStep2Time = recoveryRunningTime;
 	}
-	if ((recoveryRunningTime - recoveryStep2Time + ) > 28800000) {
+	if ((recoveryRunningTime - recoveryStep2Time) > 28800000) {
 		node.writeSingleRegister(output_status_reg.address, 0);
 		swState_batteryRecovery = 0;
 		step1 = !step1;

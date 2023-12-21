@@ -15,10 +15,12 @@ AsyncWebServer server(80);
 
 byte buf[] = {0x71, 0x75, 0x65, 0x72, 0x79, 0x64, 0x0d, 0x0a};
 bool swState_connect_rk, swState_batteryRecovery = 0;
+bool flagToMillis = 1;
 int v_out = 0;
 int8_t connectionNumber = 0;
 unsigned long messageInterval = 500;
-  
+uint32_t recoveryStartTime, recoveryRunningTime, recoveryStep2Time = 0;
+
 ModbusMaster node;
 
 typedef struct ModbusRegister {
@@ -120,8 +122,8 @@ void webSocketEvent(uint8_t client_num, WStype_t type, uint8_t* payload,
 
 void connectToWiFi() {
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
+  //while (WiFi.status() != WL_CONNECTED) {
+    //delay(1000);
     // Serial.println("Connecting to WiFi...");
   }
   // Serial.println("Connected to WiFi");
@@ -170,7 +172,32 @@ void disconnectRF6006() {
   node.writeSingleRegister(0x000F, 0);
 }
 
+
+
 void batteryRecovery() {
+	int batteryVoltageSetStep2 = 1 620; // 16.2V
+    bool step1;	
+	if (flagToMillis) {
+		flagToMillis = !flagToMillis;
+		recoveryStartTime = millis();
+		node.writeSingleRegister(v_set_reg.address, batteryVoltageSet);
+		node.writeSingleRegister(i_set_reg.address, (batteryCapacity * 0.01);
+		delay(100);
+		node.writeSingleRegister(output_status_reg.address, 1);
+	}
+	recoveryRunningTime = millis() - recoveryStartTime;
 	
+	if ((batteryVoltageSet > (v_out-0.02)) && (i_out < (batteryCapacyty * 0.001)) && (step1) {
+		step1 = !step1;
+		node.writeSingleRegister(v_set_reg.address, batteryVoltageSetStep2);
+		node.writeSingleRegister(i_set_reg.address, (batteryCapacity * 0.02);
+		recoveryStep2Time = recoveryRunningTime;
+	}
+	if ((recoveryRunningTime - recoveryStep2Time + ) > 28800000) {
+		node.writeSingleRegister(output_status_reg.address, 0);
+		swState_batteryRecovery = 0;
+		step1 = !step1;
+		flagToMillis = !flagToMillis;
+	}
 	
 }

@@ -14,8 +14,7 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 AsyncWebServer server(80);
 
 byte buf[] = {0x71, 0x75, 0x65, 0x72, 0x79, 0x64, 0x0d, 0x0a};
-bool swState_connect_rk, swState_batteryRecovery = 0;
-bool flagToMillis = 1;
+bool swState_connect_rk, swState_batteryRecovery, flagToMillis = 0;
 int v_out = 0;
 int8_t connectionNumber = 0;
 unsigned long messageInterval = 500;
@@ -177,7 +176,7 @@ void disconnectRF6006() {
 void batteryRecovery() {
 	int batteryVoltageSetStep2 = 1 620; // 16.2V
     bool step1;	
-	if (flagToMillis) {
+	if (!flagToMillis) {
 		flagToMillis = !flagToMillis;
 		recoveryStartTime = millis();
 		node.writeSingleRegister(v_set_reg.address, batteryVoltageSet);

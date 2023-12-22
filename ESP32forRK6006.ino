@@ -58,6 +58,10 @@ void setup() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     request->send(LittleFS, "/index.html", "text/html");
   });
+  
+    server.on("/graph.html", HTTP_GET, [](AsyncWebServerRequest* request) {
+    request->send(LittleFS, "/graph.html", "text/html");
+  });
 
   server.on("/index.css", HTTP_GET, [](AsyncWebServerRequest* request) {
     request->send(LittleFS, "/index.css", "text/css");

@@ -2,6 +2,7 @@
 #include <AsyncElegantOTA.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <ESP8266HTTPClient.h>
 #include <LittleFS.h>
 #include <ModbusMaster.h>
 #include <WebSocketsServer.h>
@@ -9,6 +10,7 @@
 
 const char* ssid = "";
 const char* password = "";
+const char* serverName = "http://192.168.0.103/esp-data.php";
 
 WebSocketsServer webSocket = WebSocketsServer(81);
 AsyncWebServer server(80);
@@ -18,8 +20,10 @@ bool swState_connect_rk, swState_batteryRecovery, flagToMillis = 0;
 int v_out, i_out, batteryVoltageSet, batteryCapacity = 0;
 int8_t connectionNumber = 0;
 unsigned long messageInterval = 500;
+unsigned long messageIntervalSql = 5000;
 uint32_t recoveryStartTime, recoveryRunningTime, recoveryStep1Time,
     recoveryStep2Time = 0;
+String apiKeyValue = "tPmAT5Ab3j7F9";
 
 ModbusMaster node;
 
@@ -66,11 +70,23 @@ void setup() {
 }
 
 unsigned long lastUpdate = millis() + messageInterval;
+unsigned long lastUpdateSql = millis() + messageIntervalSql;
 
 void loop() {
   webSocket.loop();
   if (swState_batteryRecovery) {
     batteryRecovery();
+    if (lastUpdateSql + messageIntervalSql < millis()) {
+      WiFiClient client;
+      HTTPClient http;
+      http.begin(client, serverName);
+      http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+      String httpRequestData = "api_key=" + apiKeyValue + "&voltage=" + voltageSql
+                          + "&current=" + currentSql + "&capacity=" + capacitySql + "";
+      http.POST(httpRequestData);
+      http.end();
+      lastUpdateSql = millis();
+     }
   }
   readRegisters();
 }
@@ -179,6 +195,10 @@ void readRegisters() {
     doc["charge_time"] = recoveryRunningTime;
     v_out = node.getResponseBuffer(10);
     i_out = node.getResponseBuffer(11);
+    amp_hour = node.getResponseBuffer(39);
+    voltageSql = v_out / 100;
+    currentSql = i_out / 1000;
+    capacitySql = amp_hour / 1000;
     String buf;
     serializeJson(doc, buf);
     webSocket.broadcastTXT(buf);
@@ -193,8 +213,8 @@ void disconnectRF6006() {
 }
 
 void batteryRecovery() {
-  int batteryVoltageSetStep2 = 1620;
-  bool step1;
+  int batteryVoltageSetStep2 = 1620; //16,2 V
+  bool step1 = 1;
   if (!flagToMillis) {
     flagToMillis = !flagToMillis;
     recoveryStartTime = millis();

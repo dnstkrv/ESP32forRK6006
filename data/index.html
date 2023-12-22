@@ -5,7 +5,6 @@
     <title>
         Control RK6006
     </title>
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="index.css">
 </head>
 
@@ -180,7 +179,28 @@
                 <td></td>
             </tr> 
             <tr>
-                <td><input type="button" id='battery_recovery_button' onclick='sendValue(this)' value="Set voltage"></td>
+                <td><div class="checkbox-wrapper-35">
+                        <input value="private" onchange="toggleCheckboxConnect(this)" name="switch" id="battery_recovery" type="checkbox" class="switch">
+                        <label for="battery_recovery">
+                            <span class="switch-x-text">
+                                Status:
+                            </span>
+                            <span class="switch-x-toggletext">
+                                <span class="switch-x-unchecked">
+                                    <span class="switch-x-hiddenlabel">
+                                        Unchecked:
+                                    </span>
+                                    Off
+                                </span>
+                                <span class="switch-x-checked">
+                                    <span class="switch-x-hiddenlabel">
+                                        Checked:
+                                    </span>
+                                    On
+                                </span>
+                            </span>
+                        </label>
+                    </div></td>
                 <td>Charge time: <span id='charge_time'>0</span>min.</div></td>
                 <td></td>
             </tr>
@@ -281,6 +301,36 @@
                         value: '0'
                     }));;
                 }
+            }
+
+            if ((element.id == 'battery_recovery') && (document.getElementById('connect_rk').checked)) {
+                if (document.getElementById('battery_recovery').checked) {
+                    socket.send(JSON.stringify({
+                    type: 'batteryVoltageSet',
+                    value: document.getElementById('batteryVoltageSet').value * 100
+                }
+        ));
+        socket.send(JSON.stringify({
+                    type: 'batteryCapacity',
+                    value: document.getElementById('batteryCapacity').value
+                }
+        ));
+        socket.send(JSON.stringify({
+                    type: 'swState_batteryRecovery',
+                    value: '1'
+                }
+        ));
+
+
+
+
+} else {
+    socket.send(JSON.stringify({
+                    type: 'swState_batteryRecovery',
+                    value: '0'
+                }
+        ));
+}
             }
         }
 

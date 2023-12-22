@@ -1,7 +1,7 @@
 #include <ArduinoJson.h>
+#include <AsyncElegantOTA.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include <AsyncElegantOTA.h>
 #include <LittleFS.h>
 #include <ModbusMaster.h>
 #include <WebSocketsServer.h>
@@ -14,13 +14,12 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 AsyncWebServer server(80);
 
 byte buf[] = {0x71, 0x75, 0x65, 0x72, 0x79, 0x64, 0x0d, 0x0a};
-bool swState_connect_rk = 0;
-bool swState_batteryRecovery = 0;
-bool flagToMillis = 0;
+bool swState_connect_rk, swState_batteryRecovery, flagToMillis = 0;
 int v_out, i_out, batteryVoltageSet, batteryCapacity = 0;
 int8_t connectionNumber = 0;
 unsigned long messageInterval = 500;
-uint32_t recoveryStartTime, recoveryRunningTime, recoveryStep1Time, recoveryStep2Time = 0;
+uint32_t recoveryStartTime, recoveryRunningTime, recoveryStep1Time,
+    recoveryStep2Time = 0;
 
 ModbusMaster node;
 
@@ -59,7 +58,6 @@ void setup() {
   server.on("/index.css", HTTP_GET, [](AsyncWebServerRequest* request) {
     request->send(LittleFS, "/index.css", "text/css");
   });
-  
 
   AsyncElegantOTA.begin(&server);
   server.begin();
@@ -68,14 +66,13 @@ void setup() {
 }
 
 unsigned long lastUpdate = millis() + messageInterval;
-  
+
 void loop() {
   webSocket.loop();
   if (swState_batteryRecovery) {
-	  batteryRecovery();
+    batteryRecovery();
   }
   readRegisters();
-  
 }
 
 void webSocketEvent(uint8_t client_num, WStype_t type, uint8_t* payload,
@@ -112,15 +109,22 @@ void webSocketEvent(uint8_t client_num, WStype_t type, uint8_t* payload,
           node.writeSingleRegister(output_status_reg.address, 0);
         }
       }
-	  
-	  if (strcmp(type, "batteryVoltageSet") == 0) {
+
+      if (strcmp(type, "batteryVoltageSet") == 0) {
         batteryVoltageSet = value;
       }
-	  if (strcmp(type, "batteryCapacity") == 0) {
+      if (strcmp(type, "batteryCapacity") == 0) {
         batteryCapacity = value;
       }
-	  if (strcmp(type, "swState_batteryRecovery") == 0) {
+      if (strcmp(type, "swState_batteryRecovery") == 0) {
         swState_batteryRecovery = value;
+        if (value == 0) {
+          recoveryStartTime = 0;
+          flagToMillis = 0;
+          recoveryRunningTime = 0;
+          recoveryStep1Time = 0;
+          recoveryStep2Time = 0;
+        }
       }
 
       break;
@@ -136,9 +140,9 @@ void webSocketEvent(uint8_t client_num, WStype_t type, uint8_t* payload,
 
 void connectToWiFi() {
   WiFi.begin(ssid, password);
-  //while (WiFi.status() != WL_CONNECTED) {
-    //delay(1000);
-    // Serial.println("Connecting to WiFi...");
+  // while (WiFi.status() != WL_CONNECTED) {
+  // delay(1000);
+  //  Serial.println("Connecting to WiFi...");
   //}
   // Serial.println("Connected to WiFi");
   // Serial.print("IP Address: ");
@@ -172,7 +176,7 @@ void readRegisters() {
     doc["watt_hour"] = node.getResponseBuffer(41);
     doc["v_set"] = node.getResponseBuffer(8);
     doc["i_set"] = node.getResponseBuffer(9);
-	  doc["charge_time"] = recoveryRunningTime;
+    doc["charge_time"] = recoveryRunningTime;
     v_out = node.getResponseBuffer(10);
     i_out = node.getResponseBuffer(11);
     String buf;
@@ -180,7 +184,6 @@ void readRegisters() {
     webSocket.broadcastTXT(buf);
     lastUpdate = millis();
   }
-	
 }
 
 void disconnectRF6006() {
@@ -189,33 +192,33 @@ void disconnectRF6006() {
   node.writeSingleRegister(0x000F, 0);
 }
 
-
-
 void batteryRecovery() {
-	int batteryVoltageSetStep2 = 1620; 
-  bool step1;	
-	if (!flagToMillis) {
-		flagToMillis = !flagToMillis;
-		recoveryStartTime = millis();
-		node.writeSingleRegister(v_set_reg.address, batteryVoltageSet);
-		node.writeSingleRegister(i_set_reg.address, (batteryCapacity * 0.01 * 1000));
-		delay(100);
-		node.writeSingleRegister(output_status_reg.address, 1);
-	  }
-	recoveryRunningTime = millis() - recoveryStartTime;
-	
-	if ((batteryVoltageSet > (v_out-0.02)) && (i_out < (batteryCapacity * 0.001)) && (step1)) {
-		step1 = !step1;
-		node.writeSingleRegister(v_set_reg.address, batteryVoltageSetStep2 * 100);
-		node.writeSingleRegister(i_set_reg.address, (batteryCapacity * 0.02 * 1000));
-		recoveryStep1Time = recoveryStartTime - recoveryRunningTime;
-		recoveryStep2Time = recoveryRunningTime;
-	}
-	if ((recoveryRunningTime - recoveryStep2Time) > 28800000) {
-		node.writeSingleRegister(output_status_reg.address, 0);
-		swState_batteryRecovery = 0;
-		step1 = !step1;
-		flagToMillis = !flagToMillis;
-	}
-	
+  int batteryVoltageSetStep2 = 1620;
+  bool step1;
+  if (!flagToMillis) {
+    flagToMillis = !flagToMillis;
+    recoveryStartTime = millis();
+    node.writeSingleRegister(v_set_reg.address, batteryVoltageSet);
+    node.writeSingleRegister(i_set_reg.address,
+                             (batteryCapacity * 0.01 * 1000));
+    delay(100);
+    node.writeSingleRegister(output_status_reg.address, 1);
+  }
+  recoveryRunningTime = millis() - recoveryStartTime;
+
+  if ((batteryVoltageSet > (v_out - 0.02)) &&
+      (i_out < (batteryCapacity * 0.001)) && (step1)) {
+    step1 = !step1;
+    node.writeSingleRegister(v_set_reg.address, batteryVoltageSetStep2 * 100);
+    node.writeSingleRegister(i_set_reg.address,
+                             (batteryCapacity * 0.02 * 1000));
+    recoveryStep1Time = recoveryStartTime - recoveryRunningTime;
+    recoveryStep2Time = recoveryRunningTime;
+  }
+  if ((recoveryRunningTime - recoveryStep2Time) > 28800000) {
+    node.writeSingleRegister(output_status_reg.address, 0);
+    swState_batteryRecovery = 0;
+    step1 = !step1;
+    flagToMillis = !flagToMillis;
+  }
 }

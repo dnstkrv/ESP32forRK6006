@@ -2,14 +2,14 @@
 #include <AsyncElegantOTA.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include <ESP8266HTTPClient.h>
+#include <HTTPClient.h>
 #include <LittleFS.h>
 #include <ModbusMaster.h>
 #include <WebSocketsServer.h>
 #include <WiFi.h>
 
-const char* ssid = "";
-const char* password = "";
+const char* ssid = "admin";
+const char* password = "00000000";
 const char* serverName = "http://192.168.0.103/esp-data.php";
 
 WebSocketsServer webSocket = WebSocketsServer(81);
@@ -17,7 +17,7 @@ AsyncWebServer server(80);
 
 byte buf[] = {0x71, 0x75, 0x65, 0x72, 0x79, 0x64, 0x0d, 0x0a};
 bool swState_connect_rk, swState_batteryRecovery, flagToMillis = 0;
-int v_out, i_out, batteryVoltageSet, batteryCapacity = 0;
+int v_out, i_out, batteryVoltageSet, batteryCapacity, voltageSql, currentSql, capacitySql, amp_hour = 0;
 int8_t connectionNumber = 0;
 unsigned long messageInterval = 500;
 unsigned long messageIntervalSql = 5000;

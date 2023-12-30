@@ -200,7 +200,31 @@
                                 </span>
                             </span>
                         </label>
-                    </div></td>
+                    </div>
+                    Battery discharge voltage, V: <input type="number" value='11.5' step='0.1' min='11' max='12.8' id='dischargeVoltageSet' />
+<div class="checkbox-wrapper-35">
+                        <input value="private" onchange="toggleCheckboxConnect(this)" name="switch" id="discharge" type="checkbox" class="switch">
+                        <label for="discharge">
+                            <span class="switch-x-text">
+                                Discharge:
+                            </span>
+                            <span class="switch-x-toggletext">
+                                <span class="switch-x-unchecked">
+                                    <span class="switch-x-hiddenlabel">
+                                        Unchecked:
+                                    </span>
+                                    Off
+                                </span>
+                                <span class="switch-x-checked">
+                                    <span class="switch-x-hiddenlabel">
+                                        Checked:
+                                    </span>
+                                    On
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                </td>
                 <td>Charge time: <span id='charge_time'>0</span>min.</div></td>
                 <td></td>
             </tr>
@@ -228,6 +252,8 @@
             socket.onmessage = onMessage;
         }
 
+
+
         function updateVI(v, i, o) {
             if (document.getElementById("value_v_set").value == 0) {
                 document.getElementById("value_v_set").value = v / 100;
@@ -240,6 +266,8 @@
                 }
             }
         }
+
+
 
         function sendValue(element) {
             if (element.id == 'voltage_button') {
@@ -260,11 +288,7 @@
                     value: document.getElementById('batteryVoltageSet').value * 100
                 }
         ));
-        socket.send(JSON.stringify({
-                    type: 'batteryCapacity',
-                    value: document.getElementById('batteryCapacity').value
-                }
-        ));
+
         socket.send(JSON.stringify({
                     type: 'swState_batteryRecovery',
                     value: '1'
@@ -298,6 +322,24 @@
                 } else {
                     socket.send(JSON.stringify({
                         type: 'output',
+                        value: '0'
+                    }));;
+                }
+            }
+
+                if (element.id == 'discharge') {
+                if (document.getElementById('discharge').checked) {
+                    socket.send(JSON.stringify({
+                        type: 'swState_discharge',
+                        value: '1'
+                    }));
+        socket.send(JSON.stringify({
+                    type: 'dischargeVoltageSet',
+                    value: document.getElementById('dischargeVoltageSet').value * 100
+                }
+        ));    } else {
+                    socket.send(JSON.stringify({
+                        type: 'swState_discharge',
                         value: '0'
                     }));;
                 }

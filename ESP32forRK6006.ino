@@ -16,11 +16,12 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 AsyncWebServer server(80);
 
 byte buf[] = {0x71, 0x75, 0x65, 0x72, 0x79, 0x64, 0x0d, 0x0a};
-bool swState_connect_rk, swState_batteryRecovery, flagToMillis = 0;
-int v_out, i_out, batteryVoltageSet, batteryCapacity, voltageSql, currentSql, capacitySql, amp_hour = 0;
+bool swState_connect_rk, swState_batteryRecovery, swState_discharge, flagToMillis, output_status = 0;
+int v_out, i_out, batteryVoltageSet, batteryCapacity, dischargeVoltageSet, amp_hour, voltageInput = 0;
+float voltageSql, voltageInputSql, currentSql, capacitySql = 0;
 int8_t connectionNumber = 0;
 unsigned long messageInterval = 500;
-unsigned long messageIntervalSql = 5000;
+unsigned long messageIntervalSql = 60000;
 uint32_t recoveryStartTime, recoveryRunningTime, recoveryStep1Time,
     recoveryStep2Time = 0;
 String apiKeyValue = "tPmAT5Ab3j7F9";
@@ -78,20 +79,31 @@ unsigned long lastUpdateSql = millis() + messageIntervalSql;
 
 void loop() {
   webSocket.loop();
+if (swState_discharge){
+  discharge();
+}
+
   if (swState_batteryRecovery) {
-    batteryRecovery();
-    if (lastUpdateSql + messageIntervalSql < millis()) {
+    //batteryRecovery();
+  
+  uint8_t result_out;
+  result_out = node.readHoldingRegisters(0, 72);
+  output_status = node.getResponseBuffer(18);
+      if ((lastUpdateSql + messageIntervalSql < millis()) && (output_status)) {
       WiFiClient client;
       HTTPClient http;
       http.begin(client, serverName);
       http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+      voltageSql = node.getResponseBuffer(10);
+      voltageInputSql = node.getResponseBuffer(14);
+      currentSql = node.getResponseBuffer(11);
+      capacitySql = node.getResponseBuffer(39);
       String httpRequestData = "api_key=" + apiKeyValue + "&voltage=" + voltageSql
-                          + "&current=" + currentSql + "&capacity=" + capacitySql + "";
+                          + "&voltage_input=" + voltageInputSql + "&current=" + currentSql + "&capacity=" + capacitySql + "";
       http.POST(httpRequestData);
       http.end();
       lastUpdateSql = millis();
-     }
-  }
+     }}
   readRegisters();
 }
 
@@ -133,8 +145,14 @@ void webSocketEvent(uint8_t client_num, WStype_t type, uint8_t* payload,
       if (strcmp(type, "batteryVoltageSet") == 0) {
         batteryVoltageSet = value;
       }
+      if (strcmp(type, "swState_discharge") == 0) {
+        swState_discharge = value;
+      }
       if (strcmp(type, "batteryCapacity") == 0) {
         batteryCapacity = value;
+      }
+      if (strcmp(type, "dischargeVoltageSet") == 0) {
+        dischargeVoltageSet = value;
       }
       if (strcmp(type, "swState_batteryRecovery") == 0) {
         swState_batteryRecovery = value;
@@ -197,12 +215,6 @@ void readRegisters() {
     doc["v_set"] = node.getResponseBuffer(8);
     doc["i_set"] = node.getResponseBuffer(9);
     doc["charge_time"] = recoveryRunningTime;
-    v_out = node.getResponseBuffer(10);
-    i_out = node.getResponseBuffer(11);
-    amp_hour = node.getResponseBuffer(39);
-    voltageSql = v_out / 100;
-    currentSql = i_out / 1000;
-    capacitySql = amp_hour / 1000;
     String buf;
     serializeJson(doc, buf);
     webSocket.broadcastTXT(buf);
@@ -233,7 +245,7 @@ void batteryRecovery() {
   if ((batteryVoltageSet > (v_out - 0.02)) &&
       (i_out < (batteryCapacity * 0.001)) && (step1)) {
     step1 = !step1;
-    node.writeSingleRegister(v_set_reg.address, batteryVoltageSetStep2 * 100);
+    node.writeSingleRegister(v_set_reg.address, batteryVoltageSetStep2);
     node.writeSingleRegister(i_set_reg.address,
                              (batteryCapacity * 0.02 * 1000));
     recoveryStep1Time = recoveryStartTime - recoveryRunningTime;
@@ -245,4 +257,13 @@ void batteryRecovery() {
     step1 = !step1;
     flagToMillis = !flagToMillis;
   }
+}
+
+void discharge() {
+  uint8_t result_discharge;
+    result_discharge = node.readHoldingRegisters(0, 72);
+    voltageInput = node.getResponseBuffer(14);
+      if (voltageInput < dischargeVoltageSet) {
+        node.writeSingleRegister(output_status_reg.address, 0);
+      }
 }

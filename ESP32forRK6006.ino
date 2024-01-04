@@ -16,12 +16,13 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 AsyncWebServer server(80);
 
 byte buf[] = {0x71, 0x75, 0x65, 0x72, 0x79, 0x64, 0x0d, 0x0a};
-bool swState_connect_rk, swState_batteryRecovery, swState_discharge, flagToMillis, output_status = 0;
+bool swState_connect_rk, swState_batteryRecovery, swState_discharge, flagToMillis, output_status, output_status_vibrator, swSwate_vibrator = 0;
 int v_out, i_out, batteryVoltageSet, batteryCapacity, dischargeVoltageSet, amp_hour, voltageInput = 0;
 float voltageSql, voltageInputSql, currentSql, capacitySql = 0;
 int8_t connectionNumber = 0;
 unsigned long messageInterval = 500;
 unsigned long messageIntervalSql = 60000;
+unsigned long millisVibrator = 1000;
 uint32_t recoveryStartTime, recoveryRunningTime, recoveryStep1Time,
     recoveryStep2Time = 0;
 String apiKeyValue = "tPmAT5Ab3j7F9";
@@ -76,11 +77,15 @@ void setup() {
 
 unsigned long lastUpdate = millis() + messageInterval;
 unsigned long lastUpdateSql = millis() + messageIntervalSql;
+unsigned long lastUpdateVibrator = millis() + millisVibrator;
 
 void loop() {
   webSocket.loop();
 if (swState_discharge){
   discharge();
+}
+if (swSwate_vibrator){
+  vibrator();
 }
 
   if (swState_batteryRecovery) {
@@ -152,7 +157,9 @@ void webSocketEvent(uint8_t client_num, WStype_t type, uint8_t* payload,
         batteryCapacity = value;
       }
       if (strcmp(type, "dischargeVoltageSet") == 0) {
-        dischargeVoltageSet = value;
+        dischargeVoltageSet = value;}
+      if (strcmp(type, "swSwate_vibrator") == 0) {
+        swSwate_vibrator = value;
       }
       if (strcmp(type, "swState_batteryRecovery") == 0) {
         swState_batteryRecovery = value;
@@ -265,5 +272,13 @@ void discharge() {
     voltageInput = node.getResponseBuffer(14);
       if (voltageInput < dischargeVoltageSet) {
         node.writeSingleRegister(output_status_reg.address, 0);
+      }
+}
+
+void vibrator() {
+    if (lastUpdateVibrator + millisVibrator < millis()) {
+        output_status_vibrator = !output_status_vibrator;
+        node.writeSingleRegister(output_status_reg.address, output_status_vibrator);
+        lastUpdateVibrator = millis();
       }
 }

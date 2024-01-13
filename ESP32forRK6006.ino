@@ -22,7 +22,7 @@ float voltageSql, voltageInputSql, currentSql, capacitySql = 0;
 int8_t connectionNumber = 0;
 unsigned long messageInterval = 500;
 unsigned long messageIntervalSql = 60000;
-unsigned long millisVibrator = 1000;
+unsigned long millisVibrator = 3000;
 uint32_t recoveryStartTime, recoveryRunningTime, recoveryStep1Time,
     recoveryStep2Time = 0;
 String apiKeyValue = "tPmAT5Ab3j7F9";
@@ -160,6 +160,10 @@ void webSocketEvent(uint8_t client_num, WStype_t type, uint8_t* payload,
         dischargeVoltageSet = value;}
       if (strcmp(type, "swSwate_vibrator") == 0) {
         swSwate_vibrator = value;
+        if (value == 0) {
+          output_status_vibrator = 0;
+          node.writeSingleRegister(output_status_reg.address, output_status_vibrator);
+        }
       }
       if (strcmp(type, "swState_batteryRecovery") == 0) {
         swState_batteryRecovery = value;

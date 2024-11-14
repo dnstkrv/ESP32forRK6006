@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Настройка Wi-Fi</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <h2>Настройки Wi-Fi</h2>
+  <form action="/save-config" method="POST">
+    <label for="ssid">SSID:</label><br>
+    <input type="text" id="ssid" name="ssid" required><br>
+    <label for="password">Пароль:</label><br>
+    <input type="password" id="password" name="password" required><br><br>
+    <input type="submit" value="Сохранить">
+  </form>
+</body>
+</html>

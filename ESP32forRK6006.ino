@@ -8,8 +8,8 @@
 #include <WebSocketsServer.h>
 #include <WiFi.h>
 
-const char* ssid = "admin";
-const char* password = "00000000";
+const char* ssid = "";
+const char* password = "";
 const char* serverName = "http://192.168.0.103/esp-data.php";
 
 WebSocketsServer webSocket = WebSocketsServer(81);
@@ -52,21 +52,38 @@ void setup() {
   Serial.begin(115200);
   node.begin(1, Serial);
   if (!LittleFS.begin()) {
-    // Serial.println("An Error has occurred while mounting LittleFS");
+    Serial.println("Error mounting LittleFS");
     return;
   }
+
   connectToWiFi();
 
+  // Настройка маршрутов сервера
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     request->send(LittleFS, "/index.html", "text/html");
   });
-  
-    server.on("/graph.html", HTTP_GET, [](AsyncWebServerRequest* request) {
+
+  server.on("/graph.html", HTTP_GET, [](AsyncWebServerRequest* request) {
     request->send(LittleFS, "/graph.html", "text/html");
   });
 
   server.on("/index.css", HTTP_GET, [](AsyncWebServerRequest* request) {
     request->send(LittleFS, "/index.css", "text/css");
+  });
+
+  // Страница конфигурации Wi-Fi
+  server.on("/config.html", HTTP_GET, [](AsyncWebServerRequest* request) {
+    request->send(LittleFS, "/config.html", "text/html");
+  });
+
+  server.on("/setWiFi", HTTP_POST, [](AsyncWebServerRequest* request) {
+    String newSSID = request->getParam("ssid", true)->value();
+    String newPassword = request->getParam("password", true)->value();
+    // Сохранение данных новой сети (реализация зависит от вашей логики)
+    // Например, сохранить в EEPROM
+    request->send(200, "text/plain", "Wi-Fi settings saved. Rebooting...");
+    delay(2000);
+    ESP.restart();
   });
 
   AsyncElegantOTA.begin(&server);
@@ -81,20 +98,17 @@ unsigned long lastUpdateVibrator = millis() + millisVibrator;
 
 void loop() {
   webSocket.loop();
-if (swState_discharge){
-  discharge();
-}
-if (swSwate_vibrator){
-  vibrator();
-}
-
+  if (swState_discharge) {
+    discharge();
+  }
+  if (swSwate_vibrator) {
+    vibrator();
+  }
   if (swState_batteryRecovery) {
-    //batteryRecovery();
-  
-  uint8_t result_out;
-  result_out = node.readHoldingRegisters(0, 72);
-  output_status = node.getResponseBuffer(18);
-      if ((lastUpdateSql + messageIntervalSql < millis()) && (output_status)) {
+    uint8_t result_out;
+    result_out = node.readHoldingRegisters(0, 72);
+    output_status = node.getResponseBuffer(18);
+    if ((lastUpdateSql + messageIntervalSql < millis()) && (output_status)) {
       WiFiClient client;
       HTTPClient http;
       http.begin(client, serverName);
@@ -108,8 +122,29 @@ if (swSwate_vibrator){
       http.POST(httpRequestData);
       http.end();
       lastUpdateSql = millis();
-     }}
+     }
+  }
   readRegisters();
+}
+
+void connectToWiFi() {
+  WiFi.begin(ssid, password);
+  unsigned long startAttemptTime = millis();
+
+  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 10000) {
+    delay(100);
+  }
+
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Couldn't connect to Wi-Fi, opening config portal.");
+    server.onNotFound([](AsyncWebServerRequest* request) {
+      request->redirect("/config.html");
+    });
+  } else {
+    Serial.println("Connected to Wi-Fi");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+  }
 }
 
 void webSocketEvent(uint8_t client_num, WStype_t type, uint8_t* payload,
